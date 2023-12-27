@@ -19,6 +19,9 @@ docs/_build/
 .vscode
 .cache
 
+client_secret.json
+*.pickle
+
 # Coverage reports
 htmlcov/
 .coverage

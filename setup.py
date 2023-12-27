@@ -9,7 +9,11 @@ requires = [
     'beautifulsoup4',
     'youtube_dl',
     'pathlib',
-    'pandas'
+    'pandas',
+    'google-api-python-client',
+    'google-auth',
+    'google-oauth',
+    'pickle',
 ]
 
 setup(
