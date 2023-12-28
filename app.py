@@ -20,6 +20,10 @@ load_dotenv('.env')
 credentials = None
 all_song = []
 
+YOUTUBE_API_NAME = "youtube"
+YOUTUBE_API_VERSION = "v3"
+playlist_id = ""
+
 @app.route('/')
 def login():
     sp_oauth = create_spotify_OAuth()
@@ -51,7 +55,7 @@ def getTracks():
     #    all_song += items
     #    if(len(items) < 50):
     #        break
-    all_song = sp.current_user_saved_tracks(limit=5,offset=10)['items']
+    all_song = sp.current_user_saved_tracks(limit=5,offset=18)['items']
     return redirect(url_for('youtubeRedirect',_external = False))
 
 def get_token():
@@ -104,8 +108,89 @@ def youtubeRedirect():
 
 
 def youtubePlaylistCheck():
-    pass
+    global playlist_id
+    youtube = build(YOUTUBE_API_NAME,YOUTUBE_API_VERSION,credentials=credentials)
+    request = youtube.playlists().list(part="snippet",mine= True)
+    response = request.execute()
+    for item in response['items']:
+        if item["snippet"]["title"] == "Music":
+            playlist_id = item['id']
+            print(playlist_id)
+            return True
+    return False
 
 @app.route('/youtubePlaylistGeneration')
 def youtubePlaylistGeneration():
-    return 'generating youtube playlist'
+    if not youtubePlaylistCheck():
+        youtube = build(YOUTUBE_API_NAME,YOUTUBE_API_VERSION,credentials=credentials)
+        request = youtube.playlists().insert(
+            part = "snippet,status",
+            body = {
+                "snippet":{
+                    "title": "Music"
+                },
+                "status": {
+                    "privacyStatus": "private"
+                }
+            }
+        )
+        response = request.execute()
+    return redirect(url_for('youtubeAddSongs',_external = True))
+
+def checkPlaylistforSong():
+    youtube = build(YOUTUBE_API_NAME,YOUTUBE_API_VERSION,credentials=credentials)
+    request = youtube.playlistItems().list(
+        part="snippet,contentDetails",
+        maxResults=50,
+        playlistId=playlist_id
+    )
+    response = request.execute()
+    playlist_items = []
+    for items in response["items"]:
+        playlist_items.append(items["snippet"]["title"])
+    return playlist_items
+
+def searchYoutubeforSong(song_name):
+    print("Searching Song")
+    youtube = build(YOUTUBE_API_NAME,YOUTUBE_API_VERSION,credentials=credentials)
+    request = youtube.search().list(
+        part="snippet",
+        maxResults=25,
+        q=song_name
+    )
+    response = request.execute()
+    for items in response["items"]:
+        if items["id"]["kind"] == "youtube#video":
+            return items["id"]
+    #return response["items"][0]["id"]
+
+@app.route("/youtubeAddSongs")
+def youtubeAddSongs():
+    playlist_items = checkPlaylistforSong()
+    #print(playlist_items)
+    for item in all_song:
+        if any(item["track"]["name"] in s for s in playlist_items):
+            continue
+        else:
+            search_string = item["track"]["name"] +" "+ item["track"]["artists"][0]["name"]
+            print(search_string)
+            id = searchYoutubeforSong(search_string)
+            try:
+                youtube = build(YOUTUBE_API_NAME,YOUTUBE_API_VERSION,credentials=credentials)
+                request = youtube.playlistItems().insert(
+                part="snippet",
+                body={
+                    "snippet": {
+                        "playlistId": playlist_id,
+                    "resourceId": {
+                        "kind": id["kind"],
+                        "videoId": id["videoId"]
+                        }
+                    }
+                }
+                )
+                response = request.execute()
+            except:
+                print("Error for "+search_string)
+                continue
+    return "Done"

@@ -14,6 +14,7 @@ requires = [
     'google-auth',
     'google-oauth',
     'pickle',
+    'python-dotenv'
 ]
 
 setup(
