@@ -55,7 +55,8 @@ def getTracks():
     #    all_song += items
     #    if(len(items) < 50):
     #        break
-    all_song = sp.current_user_saved_tracks(limit=5,offset=18)['items']
+    all_song = sp.current_user_saved_tracks(limit=20,offset=45)['items']
+    #print(all_song)
     return redirect(url_for('youtubeRedirect',_external = False))
 
 def get_token():
@@ -85,13 +86,15 @@ def youtubeRedirect():
             credentials = pickle.load(token)
 
     if not credentials or not credentials.valid:
-        if credentials and credentials.expired and credentials.refresh_token:
-            print('Refreshing Access Token...')
-            credentials.refresh(Request())
+        print(credentials)
+        if credentials:
+            if credentials.expired and credentials.refresh_token:
+                print('Refreshing Access Token...')
+                credentials.refresh(Request())
         else:
             print('Fetching New Tokens...')
             flow = InstalledAppFlow.from_client_secrets_file(
-            'client_secret.json',
+            '../client_secret.json',
             scopes=[
                 'https://www.googleapis.com/auth/youtube'
             ]
